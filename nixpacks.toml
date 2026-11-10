@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["lua5_3", "luarocks"]
+
+[phases.build]
+cmds = ["luarocks install luasocket", "luarocks install lua-cjson"]
+
+[start]
+cmd = "lua main.lua"
