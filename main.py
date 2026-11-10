@@ -2,6 +2,7 @@ import time
 import asyncio
 import requests
 from playwright.async_api import async_playwright
+import re
 import os
 
 TOKEN = "8807351971:AAEvFrk-l-BYVE3n4DVCFOS_bfzrkXSYHVw"
@@ -10,11 +11,10 @@ CHAT_ID = "6837476103"
 message_id = None
 
 async def get_automatic_live_accounts_browser():
-    """Playwright vasitəsilə real brauzer simulyasiya edərək canlı hesabları tapır"""
+    """Playwright ilə səhifəni aşağı sürüşdürərək canlı yayımları avtomatik tapır"""
     accounts = []
     try:
         async with async_playwright() as p:
-            # Brauzeri səssiz (görünməz) rejimdə işə salırıq
             browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
             context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -24,12 +24,16 @@ async def get_automatic_live_accounts_browser():
             # TikTok live səhifəsinə daxil oluruq
             await page.goto("https://www.tiktok.com/live", timeout=60000)
             
-            # Səhifənin tam yüklənməsi üçün qısa gözləyirik
-            await page.wait_for_timeout(5000)
+            # Səhifənin elementləri yüklənməsi üçün gözləyirik
+            await page.wait_for_timeout(7000)
             
-            # Səhifədəki unikal istifadəçi adlarını (uniqueId) çəkirik
+            # Canlı yayımların yüklənməsi üçün səhifəni aşağı scroll edirik
+            for _ in range(3):
+                await page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
+                await page.wait_for_timeout(3000)
+            
+            # Səhifənin mətnini çəkib uniqueId-ləri tapırıq
             content = await page.content()
-            import re
             matches = re.findall(r'"uniqueId":"([^"]+)"', content)
             if matches:
                 accounts = list(set(matches))
@@ -50,7 +54,6 @@ def send_or_update_report(text):
         payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}  
         try:  
             res = requests.post(url_send, json=payload).json()  
-            print("Telegram-dan gələn cavab (Send):", res)
             if res.get("ok"):  
                 message_id = res["result"]["message_id"]  
         except Exception as e:
@@ -65,7 +68,6 @@ def send_or_update_report(text):
         }  
         try:  
             res = requests.post(url_edit, json=payload).json()  
-            print("Telegram-dan gələn cavab (Edit):", res)
             if not res.get("ok"):  
                 message_id = None
         except Exception as e:
