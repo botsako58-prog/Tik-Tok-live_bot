@@ -3,7 +3,7 @@ local ltn12 = require("ltn12")
 local json = require("cjson")
 
 local TOKEN = "8807351971:AAEvFrk-l-BYVE3n4DVCFOS_bfzrkXSYHVw"
-local CHAT_ID = "6837476103"
+local CHAT_ID ="1003835472130"
 local message_id = nil
 
 local function send_or_update_report(text)
