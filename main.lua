@@ -100,5 +100,5 @@ while true do
         print("Bağlantı xətası, kod:", code)
     end
 
-    os.execute("sleep 05")
+    os.execute("sleep 1")
 end
