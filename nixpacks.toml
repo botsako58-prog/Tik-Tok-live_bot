@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = ["python3", "glib", "nss", "nspr", "atk", "cups", "drm", "xkbcommon", "composite", "damage", "fixes", "randr", "gbm", "alsaLib", "libatomic_ops"]
+
+[phases.build]
+cmds = [
+    "python -m venv .venv",
+    ".venv/bin/pip install -r requirements.txt",
+    ".venv/bin/python -m playwright install chromium"
+]
