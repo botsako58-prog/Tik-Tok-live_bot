@@ -3,14 +3,13 @@ import requests
 import re
 import os
 
-# Token və Chat ID quraşdırması
 TOKEN = "8807351971:AAEvFrk-l-BYVE3n4DVCFOS_bfzrkXSYHVw"
 CHAT_ID = "6837476103"
 
 message_id = None
 
 def get_automatic_live_accounts():
-    """TikTok səhifəsindən canlıda olanları heç bir ad yazmadan özü avtomatik tapır"""
+    """TikTok səhifəsindən canlıda olanları tapmağa çalışır"""
     accounts = []
     try:
         headers = {
@@ -22,9 +21,12 @@ def get_automatic_live_accounts():
 
         matches = re.findall(r'"uniqueId":"([^"]+)"', response.text)  
         if matches:  
-            accounts = list(set(matches))  
+            accounts = list(set(matches))
+            print(f"Tapılan hesablar: {len(accounts)} ədəd")
+        else:
+            print("Səhifədən heç bir hesab tapılmadı (Regex uyğun gəlmədi).")
     except Exception as e:  
-        print(f"Xəta: {e}")  
+        print(f"TikTok sorğu xətası: {e}")  
           
     return accounts
 
@@ -37,6 +39,7 @@ def send_or_update_report(text):
         payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}  
         try:  
             res = requests.post(url_send, json=payload).json()  
+            print("Telegram-dan gələn cavab (Send):", res)
             if res.get("ok"):  
                 message_id = res["result"]["message_id"]  
         except Exception as e:
@@ -51,6 +54,7 @@ def send_or_update_report(text):
         }  
         try:  
             res = requests.post(url_edit, json=payload).json()
+            print("Telegram-dan gələn cavab (Edit):", res)
             if not res.get("ok"):
                 message_id = None
         except Exception as e:
@@ -77,6 +81,8 @@ if __name__ == '__main__':
                 f"🕒 Son Güncelleme: <code>{current_time}</code>"  
             )  
             send_or_update_report(report_text)  
+        else:
+            print("Canlı tapılmadığı üçün Telegram-a mesaj göndərilmədi.")
           
         time.sleep(30)
-
+        
