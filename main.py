@@ -1,10 +1,11 @@
+import os
 import time
 import requests
 import re
 
-# Sizin Telegram bot məlumatlarınız
-TOKEN = "8807351971:AAFsd-UzcxxdkYRxK_MS0hgsYsnAyMdBGQM"
-CHAT_ID = "1003835472130"
+# Telegram bot məlumatları mühit dəyişənlərindən oxunur
+TOKEN = os.environ["TELEGRAM_TOKEN"]
+CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 message_id = None
 
