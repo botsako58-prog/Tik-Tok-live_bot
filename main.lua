@@ -1,4 +1,4 @@
-local http = require("socket.http")
+local http = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
 
