@@ -1,6 +1,7 @@
 import time
+import asyncio
 import requests
-import json
+from playwright.async_api import async_playwright
 import os
 
 TOKEN = "8807351971:AAEvFrk-l-BYVE3n4DVCFOS_bfzrkXSYHVw"
@@ -8,52 +9,37 @@ CHAT_ID = "6837476103"
 
 message_id = None
 
-def get_automatic_live_accounts():
-    """TikTok mobil/veb API nöqtələrindən istifadə edərək canlı yayımları avtomatik tapır"""
+async def get_automatic_live_accounts_browser():
+    """Playwright vasitəsilə real brauzer simulyasiya edərək canlı hesabları tapır"""
     accounts = []
-    
-    headers = {
-        "User-Agent": "com.zhiliaoapp.musically/2023405040 (Linux; U; Android 13; tr_TR; SM-S918B; Build/TP1A.220606.010; PocketBuild/release)",
-        "Accept": "application/json",
-        "Accept-Language": "az-AZ,az;q=0.9,en-US;q=0.8,en;q=0.7",
-        "X-Sec-Child-Token": "",
-        "Cookie": "tt_webid=7000000000000000000;"
-    }
-    
-    api_urls = [
-        "https://api16-normal-useast5.tiktokv.com/aweme/v1/feed/?type=51&count=20",
-        "https://www.tiktok.com/api/recommend/live/room/?aid=1988&count=30",
-        "https://m.tiktok.com/api/live/list/?aid=1988&count=30"
-    ]
-    
-    for api_url in api_urls:
-        try:
-            response = requests.get(api_url, headers=headers, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
+    try:
+        async with async_playwright() as p:
+            # Brauzeri səssiz (görünməz) rejimdə işə salırıq
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = await context.new_page()
+            
+            # TikTok live səhifəsinə daxil oluruq
+            await page.goto("https://www.tiktok.com/live", timeout=60000)
+            
+            # Səhifənin tam yüklənməsi üçün qısa gözləyirik
+            await page.wait_for_timeout(5000)
+            
+            # Səhifədəki unikal istifadəçi adlarını (uniqueId) çəkirik
+            content = await page.content()
+            import re
+            matches = re.findall(r'"uniqueId":"([^"]+)"', content)
+            if matches:
+                accounts = list(set(matches))
                 
-                if "data" in data and "rooms" in data["data"]:
-                    for room in data["data"]["rooms"]:
-                        owner = room.get("owner", {})
-                        unique_id = owner.get("uniqueId")
-                        if unique_id:
-                            accounts.append(unique_id)
-                
-                elif "aweme_list" in data:
-                    for aweme in data["aweme_list"]:
-                        if "live_room" in aweme and aweme["live_room"]:
-                            owner = aweme["live_room"].get("owner", {})
-                            unique_id = owner.get("uniqueId")
-                            if unique_id:
-                                accounts.append(unique_id)
-                                
-                if accounts:
-                    break
-        except Exception as e:
-            continue
-
-    print(f"Tapılan hesablar: {len(accounts)} ədəd")
-    return list(set(accounts))
+            await browser.close()
+    except Exception as e:
+        print(f"Playwright xətası: {e}")
+        
+    print(f"Tapılan hesablar (Brauzer): {len(accounts)} ədəd")
+    return accounts
 
 def send_or_update_report(text):
     global message_id
@@ -85,29 +71,31 @@ def send_or_update_report(text):
         except Exception as e:
             print(f"Mesaj yeniləmə xətası: {e}")  
 
-if __name__ == '__main__':
-    print("Avtomatik sistem işə düşdü...")
-
-    while True:  
-        auto_accounts = get_automatic_live_accounts()  
-        total_found = len(auto_accounts)  
-          
-        if total_found > 0:  
-            active_user = auto_accounts[0]  
-            current_time = time.strftime("%H:%M:%S")  
-              
-            report_text = (  
-                f"🔴 <b>Avtomatik Tapılan Canlı Yayım</b>\n\n"  
-                f"👤 Kanal: <b>@{active_user}</b>\n"  
-                f"🔗 Link: https://www.tiktok.com/@{active_user}/live\n\n"  
-                f"━━━━━━━━━━━━━━━━━━━\n"  
-                f"⚙️ <b>SİSTEM RAPORU</b>\n\n"  
-                f"📊 Avtomatik Tapılan Canlı Sayı: <b>{total_found}</b>\n"  
-                f"🕒 Son Güncelleme: <code>{current_time}</code>"  
-            )  
-            send_or_update_report(report_text)  
-        else:
-            print("Canlı tapılmadığı üçün Telegram-a mesaj göndərilmədi.")
-          
-        time.sleep(30)
+async def main():
+    print("Avtomatik Playwright sistemi işə düşdü...")
+    while True:
+        auto_accounts = await get_automatic_live_accounts_browser()
+        total_found = len(auto_accounts)
         
+        if total_found > 0:
+            active_user = auto_accounts[0]
+            current_time = time.strftime("%H:%M:%S")
+            
+            report_text = (
+                f"🔴 <b>Avtomatik Tapılan Canlı Yayım</b>\n\n"
+                f"👤 Kanal: <b>@{active_user}</b>\n"
+                f"🔗 Link: https://www.tiktok.com/@{active_user}/live\n\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"⚙️ <b>SİSTEM RAPORU</b>\n\n"
+                f"📊 Avtomatik Tapılan Canlı Sayı: <b>{total_found}</b>\n"
+                f"🕒 Son Güncelleme: <code>{current_time}</code>"
+            )
+            send_or_update_report(report_text)
+        else:
+            print("Canlı tapılmadı.")
+            
+        await asyncio.sleep(30)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+    
