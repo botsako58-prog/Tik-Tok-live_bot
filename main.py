@@ -1,6 +1,7 @@
 import time
 import requests
 import re
+import json
 import os
 
 TOKEN = "8807351971:AAEvFrk-l-BYVE3n4DVCFOS_bfzrkXSYHVw"
@@ -9,26 +10,42 @@ CHAT_ID = "6837476103"
 message_id = None
 
 def get_automatic_live_accounts():
-    """TikTok səhifəsindən canlıda olanları tapmağa çalışır"""
+    """TikTok-un daxili API-si və səhifəsindən canlıda olanları avtomatik tapır"""
     accounts = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "az,en;q=0.9",
+        "Referer": "https://www.tiktok.com/live"
+    }
+    
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "az,en;q=0.9"
-        }
-        url = "https://www.tiktok.com/live"
-        response = requests.get(url, headers=headers, timeout=10)
+        # 1. TikTok Live API sorğusu
+        api_url = "https://www.tiktok.com/api/recommend/live/room/?aid=1988&count=30"
+        api_res = requests.get(api_url, headers=headers, timeout=10)
+        data = api_res.json()
+        
+        if "data" in data and "rooms" in data["data"]:
+            for room in data["data"]["rooms"]:
+                owner = room.get("owner", {})
+                unique_id = owner.get("uniqueId")
+                if unique_id:
+                    accounts.append(unique_id)
+    except Exception as e:
+        print(f"API sorğu xətası: {e}")
 
-        matches = re.findall(r'"uniqueId":"([^"]+)"', response.text)  
-        if matches:  
-            accounts = list(set(matches))
-            print(f"Tapılan hesablar: {len(accounts)} ədəd")
-        else:
-            print("Səhifədən heç bir hesab tapılmadı (Regex uyğun gəlmədi).")
-    except Exception as e:  
-        print(f"TikTok sorğu xətası: {e}")  
-          
-    return accounts
+    # 2. Əgər API-dən nəticə gəlməzsə, əsas səhifəni regex ilə yoxla
+    if not accounts:
+        try:
+            url = "https://www.tiktok.com/live"
+            response = requests.get(url, headers=headers, timeout=10)
+            matches = re.findall(r'"uniqueId":"([^"]+)"', response.text)  
+            if matches:  
+                accounts = list(set(matches))  
+        except Exception as e:  
+            print(f"Səhifə sorğu xətası: {e}")  
+      
+    print(f"Tapılan hesablar: {len(accounts)} ədəd")
+    return list(set(accounts))
 
 def send_or_update_report(text):
     global message_id
@@ -53,9 +70,9 @@ def send_or_update_report(text):
             "disable_web_page_preview": True  
         }  
         try:  
-            res = requests.post(url_edit, json=payload).json()
+            res = requests.post(url_edit, json=payload).json()  
             print("Telegram-dan gələn cavab (Edit):", res)
-            if not res.get("ok"):
+            if not res.get("ok"):  
                 message_id = None
         except Exception as e:
             print(f"Mesaj yeniləmə xətası: {e}")  
