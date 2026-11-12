@@ -3,8 +3,8 @@ local http = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
 
-local TOKEN = "AAHRvqJm6rkKE7p96peCjon4U5hVozE2sP8"
-local CHAT_ID = "-1003835472130"
+local TOKEN = "QsfR7hFLOCnKt_fAmh3JpWEl5yGizUcYbacmxlxoaQRI1omsdWImqw"
+local CHAT_ID = "-8807351971"
 
 local message_id = nil
 
