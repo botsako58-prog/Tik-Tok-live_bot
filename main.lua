@@ -4,7 +4,7 @@ local ltn12 = require("ltn12")
 local json = require("cjson")
 
 -- OZ MELUMATLARINI YAZ
-local TOKEN = "QsfR7hFLOCnKt_fAmh3JpWEl5yGizUcYbacmxlxoaQRI1omsdWImqw"
+local TOKEN = "8807351971"
 local CHAT_ID = "-1003835472130"
 
 local function send_message(text)
