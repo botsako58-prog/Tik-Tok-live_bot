@@ -1,9 +1,11 @@
+
 local http = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
 
-local TOKEN = "8807351971:AAFFiC_3Dq_Ucpr-vlS_PT0E4Lou0hsg7wc"
+local TOKEN = "AAHRvqJm6rkKE7p96peCjon4U5hVozE2sP8"
 local CHAT_ID = "-1003835472130"
+
 local message_id = nil
 
 local function send_or_update_report(text)
@@ -23,78 +25,100 @@ local function send_or_update_report(text)
     end
 
     local response_body = {}
+
     local _, code = http.request{
         url = url,
         method = "POST",
-        headers = { ["Content-Type"] = "application/json" },
+        headers = {
+            ["Content-Type"] = "application/json"
+        },
         source = ltn12.source.string(json.encode(payload)),
         sink = ltn12.sink.table(response_body)
     }
 
-    if code == 200 then
-        local data = json.decode(table.concat(response_body))
-        if data.ok and message_id == nil then
+    local response = table.concat(response_body)
+
+    print("Telegram HTTP:", code)
+    print("Telegram cavabı:", response)
+
+    local success, data = pcall(json.decode, response)
+
+    if success and data.ok then
+        if message_id == nil then
             message_id = data.result.message_id
         end
-    else
-        message_id = nil
+        print("Telegram mesajı göndərildi!")
+        return true
     end
+
+    if success and data.description then
+        print("Telegram xətası:", data.description)
+
+        if message_id ~= nil then
+            message_id = nil
+        end
+    end
+
+    return false
 end
 
-print("100 - 10000+ Jeton Sandıq Filtri İşə Düşdü...")
+print("TikTok Sandıq Filtri başladıldı...")
 
 while true do
     local response_body = {}
+
     local _, code = http.request{
         url = "https://www.tiktok.com/live",
+        headers = {
+            ["User-Agent"] = "Mozilla/5.0"
+        },
         sink = ltn12.sink.table(response_body)
     }
 
-    if code == 200 then
+    if tonumber(code) == 200 then
         local html = table.concat(response_body)
-        
-        local found_valid_box = false
-        local target_user = "Bilinmir"
-        local box_value = 0
 
-        for uid, coins in html:gmatch('"uniqueId":"([^"]+)".-("coinCount":(%d+))') do
-            local coin_num = tonumber(coins)
-            if coin_num and coin_num >= 100 then
-                target_user = uid
-                box_value = coin_num
+        local found_valid_box = false
+
+        for uid, coins in html:gmatch(
+            '"uniqueId"%s*:%s*"([^"]+)".-"coinCount"%s*:%s*(%d+)'
+        ) do
+
+            local box_value = tonumber(coins)
+
+            if box_value and box_value >= 100 then
+                local current_time = os.date("%H:%M:%S")
+
+                local badge = "🎁 Standart Sandıq"
+
+                if box_value >= 10000 then
+                    badge = "🔥 <b>VIP SANDIQ (10K+)</b>"
+                elseif box_value >= 5000 then
+                    badge = "💎 <b>BÖYÜK SANDIQ (5K+)</b>"
+                elseif box_value >= 1000 then
+                    badge = "⭐ <b>1K+ SANDIQ</b>"
+                end
+
+                local report_text = string.format(
+                    "%s\n\n" ..
+                    "👤 Kanal: <b>@%s</b>\n" ..
+                    "💰 Jeton: <b>%d</b>\n" ..
+                    "🔗 Link: https://www.tiktok.com/@%s/live\n\n" ..
+                    "🕒 Vaxt: <code>%s</code>",
+                    badge, uid, box_value, uid, current_time
+                )
+
+                send_or_update_report(report_text)
                 found_valid_box = true
                 break
             end
         end
 
-        if found_valid_box then
-            local current_time = os.date("%H:%M:%S")
-            
-            local badge = "🎁 Standart Sandıq"
-            if box_value >= 10000 then
-                badge = "🔥 <b>ƏLA DƏYƏRLİ VIP SANDIQ (10K+)</b>"
-            elseif box_value >= 5000 then
-                badge = "💎 <b>BÖYÜK SANDIQ (5K+)</b>"
-            elseif box_value >= 1000 then
-                badge = "⭐ <b>1K+ Jetonluq Sandıq</b>"
-            end
-
-            local report_text = string.format(
-                "%s\n\n" ..
-                "👤 Kanal: <b>@%s</b>\n" ..
-                "💰 Jeton Məbləği: <b>%d Jeton</b>\n" ..
-                "🔗 Link: https://www.tiktok.com/@%s/live\n\n" ..
-                "━━━━━━━━━━━━━━━━━━━\n" ..
-                "🕒 Vaxt: <code>%s</code>",
-                badge, target_user, box_value, target_user, current_time
-            )
-
-            send_or_update_report(report_text)
-        else
-            print("100-dən aşağı yayımlar və ya sandıqsızlar filtrləndi...")
+        if not found_valid_box then
+            print("Uyğun sandıq tapılmadı.")
         end
     else
-        print("Bağlantı xətası, kod:", code)
+        print("TikTok bağlantı xətası:", code)
     end
 
     os.execute("sleep 1")
