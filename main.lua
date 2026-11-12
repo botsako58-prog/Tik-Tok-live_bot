@@ -3,7 +3,7 @@ local ltn12 = require("ltn12")
 local json = require("cjson")
 
 local TOKEN = "8807351971:AAFFiC_3Dq_Ucpr-vlS_PT0E4Lou0hsg7wc"
-local CHAT_ID ="1003835472130"
+local CHAT_ID = "-1003835472130"
 local message_id = nil
 
 local function send_or_update_report(text)
@@ -57,10 +57,8 @@ while true do
         local target_user = "Bilinmir"
         local box_value = 0
 
-        -- Səhifədəki coinCount dəyərlərini yoxlayırıq (100 və yuxarı)
         for uid, coins in html:gmatch('"uniqueId":"([^"]+)".-("coinCount":(%d+))') do
             local coin_num = tonumber(coins)
-            -- 100, 1000, 5000, 8000, 10000 və daha yuxarı sandıqları qəbul edir
             if coin_num and coin_num >= 100 then
                 target_user = uid
                 box_value = coin_num
@@ -72,7 +70,6 @@ while true do
         if found_valid_box then
             local current_time = os.date("%H:%M:%S")
             
-            -- Jeton dəyərinə görə xüsusi işarə təyin edirik
             local badge = "🎁 Standart Sandıq"
             if box_value >= 10000 then
                 badge = "🔥 <b>ƏLA DƏYƏRLİ VIP SANDIQ (10K+)</b>"
@@ -88,7 +85,7 @@ while true do
                 "💰 Jeton Məbləği: <b>%d Jeton</b>\n" ..
                 "🔗 Link: https://www.tiktok.com/@%s/live\n\n" ..
                 "━━━━━━━━━━━━━━━━━━━\n" ..
-                "🕒 Vaxt: <code>%syi</code>",
+                "🕒 Vaxt: <code>%s</code>",
                 badge, target_user, box_value, target_user, current_time
             )
 
